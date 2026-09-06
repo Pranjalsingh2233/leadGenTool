@@ -1,7 +1,9 @@
 const Business = require("../models/business");
 const Lead = require("../models/savedLead");
-const { getBusinessData } = require("../utils/dataForSeoAPI");
+const { getCountriesFromAPI } = require("../utils/countryAPI");
+const { getBusinessData, getLocationData } = require("../utils/dataForSeoAPI");
 const { formatBusiness } = require("../utils/helpers");
+const logger = require("../utils/logger");
 
 module.exports.searchLeadController = async (req, res) => {
     try {
@@ -28,15 +30,17 @@ module.exports.searchLeadController = async (req, res) => {
                 title: keyword,
                 description: keyword,
                 ...(categories.length && { categories }),
-                ...(location && { location_coordinate: location }),
+                ...(location && { location_name: location }),
                 is_claimed: isClaimed ?? true,
-                filters: minRating > 0 ? [["rating.value", ">", minRating]] : [],
+                ...(minRating > 0 && { filters: [["rating.value", ">", minRating]] }),
                 order_by: [orderBy],
                 limit,
             },
         ];
 
-        const apiRes = await getBusinessData(payload);
+        const locations = await getLocationData("in");
+        res.json({ locations })
+        // const apiRes = await getBusinessData(payload);
 
         const task = apiRes?.tasks?.[0];
 
@@ -68,7 +72,7 @@ module.exports.searchLeadController = async (req, res) => {
             businesses,
         });
     } catch (error) {
-        console.error("[lead/search] Error:", error.message);
+        logger.error("[lead/search] Error:", error.message);
 
         // Axios HTTP error
         if (error.response) {
@@ -179,7 +183,7 @@ module.exports.saveLeadsController = async (req, res) => {
             leads: results,
         });
     } catch (error) {
-        console.error("[lead/save] Error:", error.message);
+        logger.error("[lead/save] Error:", error.message);
         return res.status(500).json({
             success: false,
             message: "Internal server error",
@@ -187,3 +191,17 @@ module.exports.saveLeadsController = async (req, res) => {
         });
     }
 };
+
+module.exports.getAllCountryController = async (req, res) => {
+    try {
+        const allCountry = await getCountriesFromAPI();
+        res.status(200).json({ success: true, data: allCountry })
+    } catch (error) {
+        logger.error("[lead/country] Error:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message,
+        });
+    }
+}

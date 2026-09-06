@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { searchLeadController, saveLeadsController } = require("../controllers/lead");
+const { searchLeadController, saveLeadsController, getAllCountryController } = require("../controllers/lead");
 
 
 // ── POST /api/leads/search ────────────────────────────────────────────────────
@@ -16,6 +16,7 @@ const { searchLeadController, saveLeadsController } = require("../controllers/le
  *   orderBy      : string   – e.g. "rating.value,desc"
  * }
  */
+router.get("/country", getAllCountryController)
 router.post("/search", searchLeadController);
 router.post("/save", saveLeadsController);
 
