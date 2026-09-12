@@ -4,7 +4,7 @@ const logger = require("../utils/logger");
 
 const LOGIN = process.env.DATAFORSEO_LOGIN;
 const PASSWORD = process.env.DATAFORSEO_PASSWORD;
-
+const dataForSeoURI = "https://api.dataforseo.com/v3/business_data";
 
 
 module.exports.getBusinessData = async (payload) => {
@@ -13,10 +13,8 @@ module.exports.getBusinessData = async (payload) => {
     throw new Error("Server configuration error: Missing API credentials.");
   }
   try {
-    const authHeader = `Basic ${Buffer.from(`${LOGIN}:${PASSWORD}`).toString("base64")}`;
-
     const apiRes = await axios.post(
-      "https://api.dataforseo.com/v3/business_data/business_listings/search/live",
+      `${dataForSeoURI}/business_listings/search/live`,
       payload,
       {
         auth: {
@@ -28,6 +26,8 @@ module.exports.getBusinessData = async (payload) => {
         },
       }
     );
+
+    console.log(payload)
     return apiRes.data;
   } catch (error) {
     const apiErrorDetails = error.response?.data || error.message;
@@ -42,11 +42,15 @@ module.exports.getLocationData = async (country) => {
     logger.error("DataForSEO credentials not configured.");
     throw new Error("Server configuration error: Missing API credentials.");
   }
-  try {
-    const authHeader = `Basic ${Buffer.from(`${LOGIN}:${PASSWORD}`).toString("base64")}`;
 
+  const normalizedCountry = String(country)
+    .trim()
+    .replace(/^['"]|['"]$/g, "")
+    .toLowerCase();
+
+  try {
     const apiRes = await axios.get(
-      `https://api.dataforseo.com/v3/business_data/google/locations/${country}`,
+      `${dataForSeoURI}/google/locations/${normalizedCountry}`,
       {
         auth: {
           username: LOGIN,
@@ -57,7 +61,7 @@ module.exports.getLocationData = async (country) => {
         },
       }
     );
-    return apiRes.data.locations;
+    return apiRes.data.tasks[0];
   } catch (error) {
     const apiErrorDetails = error.response?.data || error.message;
     logger.error("DataForSEO API request failed", { details: apiErrorDetails });

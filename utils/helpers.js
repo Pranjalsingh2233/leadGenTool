@@ -1,6 +1,6 @@
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-module.exports.formatTimetable = (timetable = {}) => {
+const formatTimetable = (timetable = {}) => {
     const days = [
         "monday",
         "tuesday",
@@ -29,7 +29,7 @@ module.exports.formatTimetable = (timetable = {}) => {
 }
 
 
-module.exports.parseContactInfo = (contactInfo = []) => {
+const parseContactInfo = (contactInfo = []) => {
     const phones = [];
     const emails = [];
     for (const entry of contactInfo) {
@@ -39,7 +39,7 @@ module.exports.parseContactInfo = (contactInfo = []) => {
     return { phones: [...new Set(phones)], emails: [...new Set(emails)] };
 }
 
-module.exports.formatBusiness = (item) => {
+const formatBusiness = (item) => {
     const { phones, emails } = parseContactInfo(item.contact_info);
 
     return {
@@ -116,3 +116,5 @@ module.exports.formatBusiness = (item) => {
         firstSeen: item.first_seen || null,
     };
 }
+
+module.exports = { formatTimetable, parseContactInfo, formatBusiness };

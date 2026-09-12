@@ -1,6 +1,6 @@
 const Business = require("../models/business");
 const Lead = require("../models/savedLead");
-const { getCountriesFromAPI } = require("../utils/countryAPI");
+const { getCountriesFromAPI, getGeocodeAddress } = require("../utils/countryAPI");
 const { getBusinessData, getLocationData } = require("../utils/dataForSeoAPI");
 const { formatBusiness } = require("../utils/helpers");
 const logger = require("../utils/logger");
@@ -17,20 +17,22 @@ module.exports.searchLeadController = async (req, res) => {
             orderBy = "rating.value,desc",
         } = req.body;
 
-        if (!keyword) {
+        if (!keyword || !location) {
             return res.status(400).json({
                 success: false,
                 message: "keyword is required",
             });
         }
 
+        const { lat, lon, radius } = await getGeocodeAddress(location);
+
         // Build DataForSEO request payload
         const payload = [
             {
                 title: keyword,
                 description: keyword,
+                location_coordinate: `${lat},${lon},${radius}`,
                 ...(categories.length && { categories }),
-                ...(location && { location_name: location }),
                 is_claimed: isClaimed ?? true,
                 ...(minRating > 0 && { filters: [["rating.value", ">", minRating]] }),
                 order_by: [orderBy],
@@ -38,9 +40,7 @@ module.exports.searchLeadController = async (req, res) => {
             },
         ];
 
-        const locations = await getLocationData("in");
-        res.json({ locations })
-        // const apiRes = await getBusinessData(payload);
+        const apiRes = await getBusinessData(payload);
 
         const task = apiRes?.tasks?.[0];
 
@@ -48,7 +48,7 @@ module.exports.searchLeadController = async (req, res) => {
         if (!task || task.status_code !== 20000) {
             return res.status(502).json({
                 success: false,
-                message: task?.status_message || "DataForSEO task failed",
+                message: task?.status_message || "Failed getting lead",
                 statusCode: task?.status_code,
             });
         }
@@ -195,9 +195,41 @@ module.exports.saveLeadsController = async (req, res) => {
 module.exports.getAllCountryController = async (req, res) => {
     try {
         const allCountry = await getCountriesFromAPI();
+
         res.status(200).json({ success: true, data: allCountry })
     } catch (error) {
-        logger.error("[lead/country] Error:", error.message);
+        logger.error(`[lead/country] Error: ${error.message}`);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message,
+        });
+    }
+}
+
+module.exports.getAllStateController = async (req, res) => {
+    try {
+        const { countryCode } = req.query;
+        if (!countryCode) {
+            return res.status(400).json({
+                success: false,
+                message: "Please select country code",
+            });
+        }
+        const response = await getLocationData(countryCode);
+
+        if (response.status_code !== 20000) {
+            return res.status(400).json({
+                success: false,
+                message: data.status_message || "Something went wrong",
+            });
+        }
+
+        const allLocations = response.result;
+
+        res.status(200).json({ success: true, data: allLocations || [] })
+    } catch (error) {
+        logger.error("[lead/state] Error:", error.message);
         return res.status(500).json({
             success: false,
             message: "Internal server error",
