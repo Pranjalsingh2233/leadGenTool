@@ -27,11 +27,9 @@ module.exports.getBusinessData = async (payload) => {
       }
     );
 
-    console.log(payload)
     return apiRes.data;
   } catch (error) {
     const apiErrorDetails = error.response?.data || error.message;
-    coonsole.log(apiErrorDetails)
     logger.error("DataForSEO API request failed", { details: apiErrorDetails });
     throw error;
   }

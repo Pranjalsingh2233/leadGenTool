@@ -107,10 +107,10 @@ module.exports.searchLeadController = async (req, res) => {
 
 module.exports.saveLeadsController = async (req, res) => {
     try {
-        const userId = req.user?._id;
-        if (!userId) {
-            return res.status(401).json({ success: false, message: "Unauthorized" });
-        }
+        // const userId = req.user?._id;
+        // if (!userId) {
+        //     return res.status(401).json({ success: false, message: "Unauthorized" });
+        // }
 
         const { businesses } = req.body;
         if (!Array.isArray(businesses) || businesses.length === 0) {
@@ -128,11 +128,19 @@ module.exports.saveLeadsController = async (req, res) => {
                 ? { "customFields.cid": b.cid }
                 : { "customFields.placeId": b.placeId };
 
+            // Generate slug manually (pre-save hooks don't run on findOneAndUpdate)
+            const businessName = b.name || "Unknown";
+            const slug = businessName
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/(^-|-$)/g, "");
+
             const businessDoc = await Business.findOneAndUpdate(
                 filter,
                 {
                     $setOnInsert: {
-                        name: b.name || "Unknown",
+                        name: businessName,
+                        slug,
                         description: b.description || "",
                         industry: b.category || "",
                         email: b.emails?.[0] || "",
@@ -157,23 +165,23 @@ module.exports.saveLeadsController = async (req, res) => {
                         ]),
                     },
                 },
-                { upsert: true, new: true, setDefaultsOnInsert: true }
+                { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
             );
 
             // ── 2. Upsert Lead (one record per user + business) ──
-            const savedLead = await Lead.findOneAndUpdate(
-                { business: businessDoc._id, user: userId },
-                { $setOnInsert: { business: businessDoc._id, user: userId } },
-                { upsert: true, new: true, setDefaultsOnInsert: true }
-            );
+            // const savedLead = await Lead.findOneAndUpdate(
+            //     { business: businessDoc._id, user: userId },
+            //     { $setOnInsert: { business: businessDoc._id, user: userId } },
+            //     { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
+            // );
 
             results.push({
                 businessId: businessDoc._id,
-                savedLeadId: savedLead._id,
+                // savedLeadId: savedLead._id,
                 name: businessDoc.name,
-                status: savedLead.status,
-                listIds: savedLead.listIds,
-                alreadyExisted: !savedLead.isNew,
+                // status: savedLead.status,
+                // listIds: savedLead.listIds,
+                // alreadyExisted: !savedLead.isNew,
             });
         }
 
